@@ -6,10 +6,10 @@
 #' mkTrend is 4-fold faster with `.lm.fit`.
 #'
 #' @param y numeric vector
-#' @param x numeric vector
+#' @param x (optional) numeric vector
 #' @param ci critical value of autocorrelation
 #' @param IsPlot boolean
-#'
+#' 
 #' @return
 #' * `Z0`   : The original (non corrected) Mann-Kendall test Z statistic.
 #' * `pval0`: The original (non corrected) Mann-Kendall test p-value
@@ -40,6 +40,9 @@
 #' r_cpp <- mkTrend(x, IsPlot = TRUE)
 #' @export
 mkTrend <- function(y, x = seq_along(y), ci = 0.95, IsPlot = FALSE) {
+    x <- x %||% seq_along(y)
+    if (all(is.na(x))) x <- seq_along(y)
+
     z0    = z = NA_real_
     pval0 = pval = NA_real_
     slp <- NA_real_
@@ -86,36 +89,11 @@ mkTrend <- function(y, x = seq_along(y), ci = 0.95, IsPlot = FALSE) {
     pval0 = 2 * pnorm(-abs(z0))
     Tau = S/(0.5 * n * (n - 1))
 
-    slp <- senslope(y, x)
+    slp <- slope_sen(y, x)
     intercept <- mean(y - slp * x, na.rm = T)
     if (IsPlot) abline(b = slp, a = intercept, col = "red")
 
     c(z0 = z0, pval0 = pval0, z = z, pval = pval, slp = slp, intercept = intercept)
-}
-
-senslope_r <- function(y, x = seq_along(y)) {
-    n = length(x)
-    V <- rep(NA, times = (n^2 - n) / 2)
-    k = 0
-    for (i in 2:n) {
-        for (j in 1:(i - 1)) {
-            # for (j in 1:(n - 1)) {
-            k = k + 1
-            V[k] = (y[i] - y[j]) / (x[i] - x[j])
-        }
-    }
-    median(na.omit(V))
-}
-
-Sf_r <- function(y) {
-    n = length(y)
-    S = 0
-    for (i in 1:(n - 1)) {
-        for (j in (i + 1):n) {
-            S = S + sign(y[j] - y[i])
-        }
-    }
-    S
 }
 
 #' faster autocorrelation based on ffw
